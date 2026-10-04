@@ -1,0 +1,33 @@
+{
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              [":BUN:", ":NODE:"],
+              ":BLANK_LINE:",
+              ":PACKAGE:",
+              ":BLANK_LINE:",
+              "#~/**/*",
+              ":BLANK_LINE:",
+              "#@/**/*",
+              ":BLANK_LINE:",
+              ["#$/**/*", "#$$/**/*", "#%/**/*"]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  }
+}
