@@ -127,15 +127,64 @@ From devenv these sit under `treefmt.config`. A hook takes its overrides
 on `git-hooks.hooks.<name>`, for instance `files` or `settings.root` on
 `crate2nix`.
 
+## How to synthesize workflows with cdkactions
+
+Point the `cdkactions` hook at the `cdkactions.yaml`, and turn on the
+workflow formatter so the output is formatted the same way on every run.
+From devenv:
+
+```nix
+git-hooks.hooks.cdkactions = {
+  enable = true;
+  settings = {
+    configFile = "infrastructure/ci-cd/cdkactions.yaml";
+    yarnOfflineCache = pkgs.yarn-berry.fetchYarnBerryDeps {
+      yarnLock = ./yarn.lock;
+      hash = "sha256-…";
+    };
+  };
+};
+treefmt.config.devkit.githubWorkflows.enable = true;
+```
+
+From a plain flake, also set `settings.treefmt` to
+`treefmt.config.build.wrapper`; the devenv module sets it to the
+project's treefmt. Leave `yarnOfflineCache` unset where the hook runs
+with `node_modules` already installed.
+
+The commit fails while the synthesized workflows differ from what is
+staged, including a workflow synth added and nobody staged yet.
+
+## How to configure ls-lint
+
+devkit's rules apply to the whole tree. A scope changes only the keys it
+names and keeps the rest, and `ignore` adds to devkit's list:
+
+```nix
+git-hooks.hooks.lsLint = {
+  enable = true;
+  settings = {
+    rules.".md" = "kebab-case | SCREAMING_SNAKE_CASE";
+    scopes."libraries/rust".".dir" = "snake_case | kebab-case";
+    scopes."ui-app".".tsx" = "kebab-case | regex:^_[a-z]+$";
+    ignore = ["**/generated"];
+  };
+};
+```
+
+Set a rule to `null` to stop checking that key, in the whole tree or in
+one scope. To keep the configuration in the repository instead, set
+`settings.configFile = ".ls-lint.yml"`.
+
 ## Reference
 
 ### Flake outputs
 
 | Output | What it is |
 | --- | --- |
-| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` and `treefmt.config.devkit.biome.enable` are both true, it also enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
+| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` is true, it sets `cdkactions`' `settings.treefmt` to devenv's treefmt wrapper. When `treefmt.config.devkit.biome.enable` is also true, it enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
 | `treefmtModules.default` | treefmt-nix module. See [treefmt module](#treefmt-module). |
-| `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `crate2nix`, `lsLint`. |
+| `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `cdkactions`, `crate2nix`, `lsLint`. |
 | `lib.treefmt pkgs module` | `treefmt-nix.lib.evalModule` with `treefmtModules.default` and `module` imported. |
 
 ### Hooks
@@ -150,6 +199,21 @@ repository root when the two differ, on every commit.
 | --- | --- |
 | `settings.configFile` | none, required. The devenv module sets it to `treefmt.config.devkit.biome.configFile`. |
 | `always_run` | `true` |
+
+**`cdkactions`.** Runs `cdkactions synth` from the directory holding
+`settings.configFile`, against the working tree, then `settings.treefmt`
+over the `output` directory that file names. Fails when synth leaves an
+untracked file in that directory.
+
+| Option | Default |
+| --- | --- |
+| `settings.configFile` | none, required. Relative to the repository root. |
+| `settings.packageManager` | `"yarn"`: `yarn cdkactions synth`. Also `"npm"` (`npx --no-install`), `"pnpm"` (`pnpm exec`), `"bun"` (`bun x`). |
+| `settings.yarnOfflineCache` | `null`. A `fetchYarnBerryDeps` output: the hook first runs `yarn install --immutable` offline from a writable copy of it under `$XDG_CACHE_HOME/devkit/yarn`, and fails if `yarn.lock` differs from the cache's. |
+| `settings.nodejs` | `pkgs.nodejs` |
+| `settings.treefmt` | `null`, so no formatting |
+| `package` | the package manager: `pkgs.yarn-berry`, `pkgs.nodejs`, `pkgs.pnpm` or `pkgs.bun` |
+| `files` | the config file's directory, `.github/workflows/`, any `package.json`, `yarn.lock` |
 
 **`crate2nix`.** Runs `crate2nix generate --format json -o Cargo.json`
 in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
@@ -167,7 +231,11 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 | --- | --- |
 | `package` | `pkgs.ls-lint` |
 | `always_run` | `true` |
-| `settings` | `null`: ls-lint reads `.ls-lint.yml` at the repository root. An attribute set is rendered to YAML and passed with `--config`. |
+| `settings.rules` | kebab-case for `.dir`, `.ts`, `.tsx`, `.js`, `.css`, `.json`, `.gql`, `.nix` and `.sh`; `snake_case \| kebab-case` for `.rs`. Each at `mkDefault`; `null` drops a rule. |
+| `settings.scopes` | `{}`. Each path is rendered as `rules` with its own keys on top. |
+| `settings.ignore` | `.git`, `.github`, `.yarn`, `.cargo`, `.direnv`, `.devenv`, `.cache`, `.claude`, `.vscode`, `node_modules`, `target`, `result`, `dist`, `cdk.out`, `__snapshots__` and `Cargo.json`, each under `**/`. A repository's entries are added. |
+| `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration. |
+| `settings.generatedConfig` | read-only: the YAML rendered from `rules`, `scopes` and `ignore` |
 
 ### treefmt module
 
@@ -209,6 +277,16 @@ nixpkgs one does.
 | --- | --- | --- |
 | `enable` | `false` | Enables `programs.taplo` with `settings`. |
 | `settings` | `formatting.column_width = 120` | Becomes `programs.taplo.settings`, rendered as `taplo.toml`. |
+
+**`devkit.githubWorkflows`**
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `enable` | `false` | Adds the `github-workflows` formatter. |
+| `includes` | `.github/workflows/*.yaml`, `.github/workflows/*.yml` | The files it formats. |
+| `expression` | `sort_keys(..) \| . as $orig \| del(.jobs) \| .jobs = $orig.jobs` | The yq expression each file is rewritten with. |
+| `unescapeUnicode` | `true` | Turns the `\uXXXX` and `\UXXXXXXXX` escapes yq writes back into characters. |
+| `priority` | `100` | Runs after a general YAML formatter matching the same file, so its output is final. |
 
 `biome/settings.nix` holds `base`, the formatter, quote style and import
 groups, and `linter`, the contents of Biome's `linter` section.

@@ -5,6 +5,7 @@
   crate2nixPackage,
 }: {
   biomeConfig = import ./biome-config.nix pkgs;
+  cdkactions = import ./cdkactions.nix pkgs;
   crate2nix = import ./crate2nix.nix {inherit pkgs crate2nixPackage;};
   lsLint = import ./ls-lint.nix pkgs;
 }

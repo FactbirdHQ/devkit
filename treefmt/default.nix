@@ -9,6 +9,7 @@
     ./biome.nix
     ./rustfmt.nix
     ./taplo.nix
+    ./github-workflows.nix
   ];
 
   # The crate2nix hook rewrites Cargo.json on every manifest change. A

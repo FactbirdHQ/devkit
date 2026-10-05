@@ -2,7 +2,8 @@
 # adds the devkit treefmt module to devenv's treefmt configuration.
 #
 # Enabling Biome in `treefmt.config` also writes `biome.json` to the
-# project root, on shell entry and from the `biomeConfig` hook.
+# project root, on shell entry and from the `biomeConfig` hook, and the
+# `cdkactions` hook formats its output with the project's treefmt.
 devkit: {
   config,
   lib,
@@ -16,6 +17,11 @@ in {
       git-hooks.hooks = devkit.lib.hooks pkgs;
       treefmt.config.imports = [devkit.treefmtModules.default];
     }
+    (lib.mkIf config.treefmt.enable {
+      # cdkactions formats what it synthesizes with the project's treefmt,
+      # the wrapper devenv gives its own treefmt hook.
+      git-hooks.hooks.cdkactions.settings.treefmt = lib.mkDefault config.git-hooks.hooks.treefmt.package;
+    })
     (lib.mkIf (config.treefmt.enable && treefmt.devkit.biome.enable) {
       git-hooks.hooks.biomeConfig = {
         enable = lib.mkDefault true;
