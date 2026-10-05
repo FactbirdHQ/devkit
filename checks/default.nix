@@ -127,21 +127,61 @@ in {
 
   # A scope keeps every shared rule and changes only the keys it sets, the
   # ignore list keeps devkit's entries beside the repository's, and a name
-  # outside the scope is still held to the shared rules.
+  # outside the scope is still held to the shared rules. What git ignores is
+  # skipped, a symlink loop inside it included, and dot-named tool
+  # directories, `__snapshots__` and `Cargo.json` pass while names that only
+  # resemble them fail.
   ls-lint = pkgs.runCommand "ls-lint" {nativeBuildInputs = [pkgs.git pkgs.yq-go];} ''
     config=${lsLint.settings.generatedConfig}
     test "$(yq -r '.ls.crates.".dir"' $config)" = "snake_case | kebab-case"
     test "$(yq -r '.ls.crates.".ts"' $config)" = kebab-case
-    test "$(yq -r '.ignore | contains(["vendor", "**/node_modules"])' $config)" = true
+    test "$(yq -r '.ignore | contains(["vendor", ".git", "node_modules"])' $config)" = true
 
     mkdir repo && cd repo && git init -q
-    mkdir -p crates/stop_registrar src vendor/Not_Ours
-    touch crates/stop_registrar/mod.rs src/good-name.ts
-    ${lsLint.entry}
+    mkdir -p crates/stop_registrar src/__snapshots__ vendor/Not_Ours .github/workflows
+    touch crates/stop_registrar/mod.rs crates/Cargo.json src/good-name.ts
+
+    # The macOS SDK in a devenv profile links include/ncurses and
+    # include/ncursesw to their own directory, so a walk that follows
+    # symlinks never ends.
+    mkdir -p Build_Output/include
+    ln -s . Build_Output/include/ncurses
+    ln -s . Build_Output/include/ncursesw
+    echo Build_Output >.gitignore
+
+    timeout 60 ${lsLint.entry}
+
+    # A lint failure exits 1; a timeout would exit 124.
+    fails() {
+      status=0
+      timeout 60 ${lsLint.entry} || status=$?
+      test "$status" = 1
+    }
     touch src/Bad_Name.ts
-    ! ${lsLint.entry}
+    fails
+    rm src/Bad_Name.ts
+    mkdir .Bad_Dot
+    fails
     touch $out
   '';
+
+  # An ignore entry with `**` is refused when the configuration evaluates.
+  ls-lint-double-star = let
+    attempt =
+      builtins.tryEval
+      (git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
+        src = ./fixture;
+        hooks.lsLint = lib.mkMerge [
+          devkitHooks.lsLint
+          {
+            enable = true;
+            settings.ignore = ["**/generated"];
+          }
+        ];
+      }).config.hooks.lsLint.settings.generatedConfig.outPath;
+  in
+    assert !attempt.success;
+      pkgs.runCommand "ls-lint-double-star" {} "touch $out";
 
   # Installs the fixture offline, synthesizes its workflow and formats it:
   # keys sorted with jobs last, and the emoji yq escapes written back. A

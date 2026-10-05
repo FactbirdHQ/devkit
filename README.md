@@ -158,7 +158,8 @@ staged, including a workflow synth added and nobody staged yet.
 ## How to configure ls-lint
 
 devkit's rules apply to the whole tree. A scope changes only the keys it
-names and keeps the rest, and `ignore` adds to devkit's list:
+names and keeps the rest. Everything git ignores is skipped, and `ignore`
+adds tracked paths to skip:
 
 ```nix
 git-hooks.hooks.lsLint = {
@@ -167,13 +168,16 @@ git-hooks.hooks.lsLint = {
     rules.".md" = "kebab-case | SCREAMING_SNAKE_CASE";
     scopes."libraries/rust".".dir" = "snake_case | kebab-case";
     scopes."ui-app".".tsx" = "kebab-case | regex:^_[a-z]+$";
-    ignore = ["**/generated"];
+    ignore = ["generated"];
   };
 };
 ```
 
 Set a rule to `null` to stop checking that key, in the whole tree or in
-one scope. To keep the configuration in the repository instead, set
+one scope. An `ignore` entry is a path from the repository root and may
+not contain `**`: ls-lint expands one by globbing the whole tree with
+symlinks followed, and a symlink loop, such as the macOS SDK in a devenv
+profile has, keeps that glob from ever finishing. To keep the configuration in the repository instead, set
 `settings.configFile = ".ls-lint.yml"`.
 
 ## Reference
@@ -225,17 +229,19 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 | `files` | `Cargo\.(toml\|lock\|json)$` |
 | `settings.root` | `"."`, the workspace root relative to the repository root |
 
-**`lsLint`.** Runs `ls_lint` over the whole tree on every commit.
+**`lsLint`.** Runs `ls_lint` over the whole tree on every commit,
+skipping every path `git ls-files --others --ignored --exclude-standard`
+lists.
 
 | Option | Default |
 | --- | --- |
 | `package` | `pkgs.ls-lint` |
 | `always_run` | `true` |
-| `settings.rules` | kebab-case for `.dir`, `.ts`, `.tsx`, `.js`, `.css`, `.json`, `.gql`, `.nix` and `.sh`; `snake_case \| kebab-case` for `.rs`. Each at `mkDefault`; `null` drops a rule. |
+| `settings.rules` | kebab-case for `.ts`, `.tsx`, `.js`, `.css`, `.gql`, `.nix` and `.sh`; kebab-case, a dot-name such as `.github`, or `__snapshots__` for `.dir`; kebab-case or `Cargo` for `.json`; `snake_case \| kebab-case` for `.rs`. Each at `mkDefault`; `null` drops a rule. |
 | `settings.scopes` | `{}`. Each path is rendered as `rules` with its own keys on top. |
-| `settings.ignore` | `.git`, `.github`, `.yarn`, `.cargo`, `.direnv`, `.devenv`, `.cache`, `.claude`, `.vscode`, `node_modules`, `target`, `result`, `dist`, `cdk.out`, `__snapshots__` and `Cargo.json`, each under `**/`. A repository's entries are added. |
-| `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration. |
-| `settings.generatedConfig` | read-only: the YAML rendered from `rules`, `scopes` and `ignore` |
+| `settings.ignore` | `.git`, `.github`, `.yarn`, `.cargo`, `.direnv`, `.devenv`, `.cache`, `.claude`, `.vscode`, `node_modules`, `target`, `result`, `dist` and `cdk.out`, each from the repository root. A repository's entries are added; none may contain `**`. The hook adds every path git ignores when it runs. |
+| `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration and as it is, without the paths git ignores. |
+| `settings.generatedConfig` | read-only: the JSON rendered from `rules`, `scopes` and `ignore`, before the hook adds the paths git ignores |
 
 ### treefmt module
 
