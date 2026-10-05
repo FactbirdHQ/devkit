@@ -54,7 +54,7 @@ in {
   hooks = git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
     src = ./fixture;
     hooks = {
-      cargoJsonSync = lib.mkMerge [devkitHooks.cargoJsonSync {enable = true;}];
+      crate2nix = lib.mkMerge [devkitHooks.crate2nix {enable = true;}];
       lsLint = lib.mkMerge [
         devkitHooks.lsLint
         {

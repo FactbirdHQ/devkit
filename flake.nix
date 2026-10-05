@@ -11,7 +11,7 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # The default for the cargoJsonSync hook. nixpkgs ships a crate2nix
+    # The default package for the crate2nix hook. nixpkgs ships a crate2nix
     # without `--format json`.
     crate2nix = {
       url = "github:nix-community/crate2nix/b873ca53dd64e12340416f0fd5e3b33792b9c17b";
@@ -41,7 +41,7 @@
       hooks = pkgs:
         import ./hooks {
           inherit pkgs;
-          crate2nix = crate2nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          crate2nixPackage = crate2nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
 
       # treefmt-nix evaluated with the devkit module, for a flake without

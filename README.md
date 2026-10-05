@@ -23,7 +23,7 @@ Import the module in `devenv.nix`, then enable what the repository needs:
 {inputs, ...}: {
   imports = [inputs.devkit.devenvModules.default];
 
-  git-hooks.hooks.cargoJsonSync.enable = true;
+  git-hooks.hooks.crate2nix.enable = true;
   git-hooks.hooks.lsLint.enable = true;
 
   git-hooks.hooks.treefmt.enable = true;
@@ -43,7 +43,7 @@ never edited by hand.
 To keep the repository's own crate2nix pin for `Cargo.json`:
 
 ```nix
-git-hooks.hooks.cargoJsonSync.package =
+git-hooks.hooks.crate2nix.package =
   inputs.crate2nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
 ```
 
@@ -74,7 +74,7 @@ in
   inputs.git-hooks.lib.${system}.run {
     src = ./.;
     hooks = {
-      cargoJsonSync = lib.mkMerge [hooks.cargoJsonSync {enable = true;}];
+      crate2nix = lib.mkMerge [hooks.crate2nix {enable = true;}];
       biomeConfig = lib.mkMerge [
         hooks.biomeConfig
         {
@@ -105,7 +105,7 @@ settings treefmt runs Biome with. Commit the file, and change it through
 | --- | --- |
 | `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` and `treefmt.config.programs.biome.enable` are both true, it also enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
 | `treefmtModules.default` | treefmt-nix module. See [treefmt module](#treefmt-module). |
-| `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `cargoJsonSync`, `lsLint`. |
+| `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `crate2nix`, `lsLint`. |
 | `lib.treefmt pkgs module` | `treefmt-nix.lib.evalModule` with `treefmtModules.default` and `module` imported. |
 
 ### Hooks
@@ -121,7 +121,7 @@ repository root when the two differ, on every commit.
 | `settings.configFile` | none, required. The devenv module sets it to `treefmt.config.devkit.biome.configFile`. |
 | `always_run` | `true` |
 
-**`cargoJsonSync`.** Runs `crate2nix generate --format json -o Cargo.json`
+**`crate2nix`.** Runs `crate2nix generate --format json -o Cargo.json`
 in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 `Cargo.json` is staged.
 
@@ -158,9 +158,9 @@ groups, and `linter`, the contents of Biome's `linter` section.
 ### Why `Cargo.json` is excluded from every formatter
 
 crate2nix writes `Cargo.json` in its own layout. If a formatter also
-rewrites it, the formatter and `cargoJsonSync` take turns changing the
+rewrites it, the formatter and the `crate2nix` hook take turns changing the
 file, and a commit that stages it never passes both. The treefmt module
-excludes it whether or not the repository enables `cargoJsonSync`, because
+excludes it whether or not the repository enables the hook, because
 crate2nix's own runs write the same layout.
 
 ### Why `biome.json` is generated and excluded from formatting
@@ -169,7 +169,7 @@ treefmt hands Biome its configuration as a store path, which editors and a
 bare `biome` never see. Writing the same file to the repository root gives
 them the settings treefmt runs with. The file is the output of the Nix
 settings, so a formatter rewriting it would fight `biomeConfig` the way it
-would fight `cargoJsonSync` over `Cargo.json`.
+would fight the `crate2nix` hook over `Cargo.json`.
 
 ### Why every Biome setting is a default
 

@@ -30,9 +30,9 @@ in {
 
   config = lib.mkMerge [
     {
-      # crate2nix writes Cargo.json, and the cargoJsonSync hook rewrites it
-      # on every manifest change. A formatter touching it as well means the
-      # two never settle on one version.
+      # The crate2nix hook rewrites Cargo.json on every manifest change. A
+      # formatter touching it as well means the two never settle on one
+      # version.
       settings.global.excludes = ["Cargo.json" "**/Cargo.json"];
     }
     (lib.mkIf biome.enable {

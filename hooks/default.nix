@@ -2,9 +2,9 @@
 # disabled until a repository sets `enable = true` on it.
 {
   pkgs,
-  crate2nix,
+  crate2nixPackage,
 }: {
   biomeConfig = import ./biome-config.nix pkgs;
-  cargoJsonSync = import ./cargo-json-sync.nix {inherit pkgs crate2nix;};
+  crate2nix = import ./crate2nix.nix {inherit pkgs crate2nixPackage;};
   lsLint = import ./ls-lint.nix pkgs;
 }
