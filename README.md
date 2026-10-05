@@ -225,7 +225,10 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 | `files` | `Cargo\.(toml\|lock\|json)$` |
 | `settings.root` | `"."`, the workspace root relative to the repository root |
 
-**`lsLint`.** Runs `ls_lint` over the whole tree on every commit.
+**`lsLint`.** Runs `ls_lint` on every commit over the names `git ls-files`
+lists, tracked or untracked but not ignored, copied as empty files into a
+temporary tree. Nothing `.gitignore` covers is checked, and no symlink is
+followed.
 
 | Option | Default |
 | --- | --- |
@@ -233,7 +236,7 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 | `always_run` | `true` |
 | `settings.rules` | kebab-case for `.dir`, `.ts`, `.tsx`, `.js`, `.css`, `.json`, `.gql`, `.nix` and `.sh`; `snake_case \| kebab-case` for `.rs`. Each at `mkDefault`; `null` drops a rule. |
 | `settings.scopes` | `{}`. Each path is rendered as `rules` with its own keys on top. |
-| `settings.ignore` | `.git`, `.github`, `.yarn`, `.cargo`, `.direnv`, `.devenv`, `.cache`, `.claude`, `.vscode`, `node_modules`, `target`, `result`, `dist`, `cdk.out`, `__snapshots__` and `Cargo.json`, each under `**/`. A repository's entries are added. |
+| `settings.ignore` | `.github`, `.yarn`, `.cargo`, `.claude`, `.vscode`, `__snapshots__` and `Cargo.json`, each under `**/`: tracked names a tool picks. A repository's entries are added. |
 | `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration. |
 | `settings.generatedConfig` | read-only: the YAML rendered from `rules`, `scopes` and `ignore` |
 

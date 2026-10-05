@@ -126,17 +126,23 @@ in {
   '';
 
   # A scope keeps every shared rule and changes only the keys it sets, the
-  # ignore list keeps devkit's entries beside the repository's, and a name
-  # outside the scope is still held to the shared rules.
+  # ignore list keeps devkit's entries beside the repository's, what git
+  # ignores is never checked, and a name outside the scope is still held to
+  # the shared rules.
   ls-lint = pkgs.runCommand "ls-lint" {nativeBuildInputs = [pkgs.git pkgs.yq-go];} ''
     config=${lsLint.settings.generatedConfig}
     test "$(yq -r '.ls.crates.".dir"' $config)" = "snake_case | kebab-case"
     test "$(yq -r '.ls.crates.".ts"' $config)" = kebab-case
-    test "$(yq -r '.ignore | contains(["vendor", "**/node_modules"])' $config)" = true
+    test "$(yq -r '.ignore | contains(["vendor", "**/Cargo.json"])' $config)" = true
 
     mkdir repo && cd repo && git init -q
-    mkdir -p crates/stop_registrar src vendor/Not_Ours
-    touch crates/stop_registrar/mod.rs src/good-name.ts
+    mkdir -p crates/stop_registrar src vendor/Not_Ours outside .devenv
+    touch crates/stop_registrar/mod.rs src/good-name.ts vendor/Not_Ours/Bad_Name.ts outside/Bad_Name.ts
+    # What .gitignore covers is never seen, symlinks included: a link back
+    # to / would otherwise be walked.
+    printf "%s\n" outside .devenv > .gitignore
+    ln -s / .devenv/root
+    ln -s ../outside .devenv/profile
     ${lsLint.entry}
     touch src/Bad_Name.ts
     ! ${lsLint.entry}
