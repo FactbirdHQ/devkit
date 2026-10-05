@@ -6,11 +6,13 @@
 # shared rules with its own keys on top, and a scope states only what it
 # changes. `configFile` uses an existing `.ls-lint.yml` instead.
 #
-# ls-lint reads no `.gitignore`, so the hook adds every path git ignores to
-# the generated `ignore` list when it runs, each as an exact path. ls-lint
-# finds what a `**` pattern matches by globbing the whole tree with symlinks
-# followed, which never finishes in a tree with a symlink loop, such as the
-# macOS SDK in a devenv profile. So no ignore entry may contain `**`.
+# ls-lint runs over a copy of the names git lists, tracked or untracked but
+# not ignored, as empty files. Its own walk follows symlinks, so in the
+# repository it would walk into the Nix store through `.devenv/profile` and
+# every other link a devenv shell leaves, whatever the ignore list says.
+# The copy holds no links and nothing `.gitignore` covers, and ls-lint only
+# reads names. ls-lint finds what a `**` pattern matches by globbing the
+# tree, so no ignore entry may contain `**`.
 pkgs: {
   config,
   lib,
@@ -52,9 +54,10 @@ in {
     ignore = lib.mkOption {
       type = lib.types.listOf exactPath;
       description = ''
-        Paths ls-lint skips, relative to the repository root, on top of
-        everything git ignores. A tracked path that should not be checked
-        belongs here. A repository's entries are added to devkit's.
+        Paths ls-lint skips among the names git lists, relative to the
+        repository root. What `.gitignore` covers never reaches ls-lint, so
+        this is for tracked names that are not the repository's to choose. A
+        repository's entries are added to devkit's.
       '';
     };
 
@@ -64,8 +67,7 @@ in {
       example = ".ls-lint.yml";
       description = ''
         An ls-lint configuration in the repository, relative to its root,
-        used instead of the generated one and as it is. The hook adds no
-        gitignored paths to it.
+        used instead of the generated one and as it is.
       '';
     };
 
@@ -73,8 +75,7 @@ in {
       type = lib.types.path;
       readOnly = true;
       description = ''
-        The configuration rendered from `rules`, `scopes` and `ignore`, before
-        the hook adds the paths git ignores.
+        The configuration rendered from `rules`, `scopes` and `ignore`.
       '';
     };
   };
@@ -98,24 +99,15 @@ in {
         # hold a hyphen, while a binary's entry file is named like any other.
         ".rs" = "snake_case | kebab-case";
       };
-      # Each entry is a path from the repository root. git ignores most of
-      # these anyway, but a repository may track a tool directory, and git
-      # never lists its own.
+      # Names a tool picks, each a path from the repository root: workflow
+      # files cdkactions names, yarn's release and plugin files, and editor
+      # and agent settings.
       ignore = [
-        ".git"
         ".github"
         ".yarn"
         ".cargo"
-        ".direnv"
-        ".devenv"
-        ".cache"
         ".claude"
         ".vscode"
-        "node_modules"
-        "target"
-        "result"
-        "dist"
-        "cdk.out"
       ];
       generatedConfig = (pkgs.formats.json {}).generate "ls-lint.json" generated;
     };
@@ -123,30 +115,28 @@ in {
     name = lib.mkDefault "ls-lint";
     description = "Check file and directory names with ls-lint";
     package = lib.mkDefault pkgs.ls-lint;
-    entry = toString (pkgs.writeShellScript "ls-lint" (''
-        set -euo pipefail
-        cd "$(${pkgs.git}/bin/git rev-parse --show-toplevel)"
-      ''
-      + (
+    entry = toString (pkgs.writeShellScript "ls-lint" ''
+      set -euo pipefail
+      export PATH=${lib.makeBinPath [pkgs.coreutils pkgs.findutils pkgs.gnused pkgs.git]}:$PATH
+      root=$(git rev-parse --show-toplevel)
+      cd "$root"
+      tree=$(mktemp -d)
+      trap 'rm -rf "$tree"' EXIT
+      git ls-files -z --cached --others --exclude-standard > "$tree.list"
+      (
+        cd "$tree"
+        tr '\0' '\n' < "$tree.list" | sed -n 's|/[^/]*$||p' | sort -u | xargs -r -d '\n' mkdir -p
+        xargs -r -0 touch < "$tree.list"
+      )
+      rm "$tree.list"
+      ${config.package}/bin/ls_lint --workdir "$tree" --config ${
         if cfg.configFile != null
-        then ''
-          exec ${config.package}/bin/ls_lint --config ${lib.escapeShellArg cfg.configFile}
-        ''
-        else ''
-          config=$(${pkgs.coreutils}/bin/mktemp)
-          trap 'rm -f "$config"' EXIT
-          # --directory names an ignored directory once instead of listing
-          # everything inside it.
-          ${pkgs.git}/bin/git ls-files -z --others --ignored --exclude-standard --directory \
-            | ${pkgs.jq}/bin/jq -Rs --slurpfile base ${cfg.generatedConfig} '
-                (split("\u0000") | map(select(length > 0) | rtrimstr("/"))) as $ignored
-                | $base[0] | .ignore += $ignored
-              ' >"$config"
-          ${config.package}/bin/ls_lint --config "$config"
-        ''
-      )));
-    # ls-lint walks the whole tree, so a rename anywhere is checked against
-    # every rule rather than only the staged paths.
+        then "\"$root\"/${lib.escapeShellArg cfg.configFile}"
+        else cfg.generatedConfig
+      }
+    '');
+    # Every listed name is checked against every rule, so a rename anywhere
+    # is caught rather than only the staged paths.
     pass_filenames = false;
     always_run = lib.mkDefault true;
   };

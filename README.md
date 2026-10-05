@@ -229,9 +229,10 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 | `files` | `Cargo\.(toml\|lock\|json)$` |
 | `settings.root` | `"."`, the workspace root relative to the repository root |
 
-**`lsLint`.** Runs `ls_lint` over the whole tree on every commit,
-skipping every path `git ls-files --others --ignored --exclude-standard`
-lists.
+**`lsLint`.** Runs `ls_lint` on every commit over the names `git ls-files`
+lists, tracked or untracked but not ignored, copied as empty files into a
+temporary tree. Nothing `.gitignore` covers is checked, and no symlink is
+followed.
 
 | Option | Default |
 | --- | --- |
@@ -239,9 +240,9 @@ lists.
 | `always_run` | `true` |
 | `settings.rules` | kebab-case for `.ts`, `.tsx`, `.js`, `.css`, `.gql`, `.nix` and `.sh`; kebab-case, a dot-name such as `.github`, or `__snapshots__` for `.dir`; kebab-case or `Cargo` for `.json`; `snake_case \| kebab-case` for `.rs`. Each at `mkDefault`; `null` drops a rule. |
 | `settings.scopes` | `{}`. Each path is rendered as `rules` with its own keys on top. |
-| `settings.ignore` | `.git`, `.github`, `.yarn`, `.cargo`, `.direnv`, `.devenv`, `.cache`, `.claude`, `.vscode`, `node_modules`, `target`, `result`, `dist` and `cdk.out`, each from the repository root. A repository's entries are added; none may contain `**`. The hook adds every path git ignores when it runs. |
-| `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration and as it is, without the paths git ignores. |
-| `settings.generatedConfig` | read-only: the JSON rendered from `rules`, `scopes` and `ignore`, before the hook adds the paths git ignores |
+| `settings.ignore` | `.github`, `.yarn`, `.cargo`, `.claude` and `.vscode`, each from the repository root: tracked names a tool picks. A repository's entries are added; none may contain `**`. |
+| `settings.configFile` | `null`. A path relative to the repository root, used instead of the generated configuration and as it is. |
+| `settings.generatedConfig` | read-only: the JSON rendered from `rules`, `scopes` and `ignore` |
 
 ### treefmt module
 
