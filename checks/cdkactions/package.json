@@ -1,0 +1,11 @@
+{
+  "name": "cdkactions-fixture",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@4.14.1",
+  "devDependencies": {
+    "@factbird/cdkactions": "2.1.2",
+    "@factbird/cdkactions-cli": "2.1.2",
+    "constructs": "10.4.2"
+  }
+}

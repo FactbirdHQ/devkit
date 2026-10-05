@@ -1,0 +1,3 @@
+language: typescript
+app: node main.ts
+output: ../.github/workflows
