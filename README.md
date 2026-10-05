@@ -29,8 +29,14 @@ Import the module in `devenv.nix`, then enable what the repository needs:
   git-hooks.hooks.treefmt.enable = true;
   treefmt = {
     enable = true;
-    config.programs.biome.enable = true;
-    config.devkit.biome.linter.enable = true;
+    config.devkit = {
+      biome = {
+        enable = true;
+        linter.enable = true;
+      };
+      rustfmt.enable = true;
+      taplo.enable = true;
+    };
   };
 }
 ```
@@ -66,8 +72,14 @@ repository's settings merge:
 let
   treefmt = inputs.devkit.lib.treefmt pkgs {
     projectRootFile = "flake.nix";
-    programs.biome.enable = true;
-    devkit.biome.linter.enable = true;
+    devkit = {
+      biome = {
+        enable = true;
+        linter.enable = true;
+      };
+      rustfmt.enable = true;
+      taplo.enable = true;
+    };
   };
   hooks = inputs.devkit.lib.hooks pkgs;
 in
@@ -97,13 +109,31 @@ settings treefmt runs Biome with. Commit the file, and change it through
 `treefmt.config.build.wrapper` also serves as the flake's `formatter`, and
 `treefmt.config.build.check self` as a flake check.
 
+## How to override a devkit setting
+
+Set the value in the tool's `devkit.<tool>.settings`. devkit defines
+every value there at default priority, so the repository's definition
+wins and the rest of devkit's settings stay:
+
+```nix
+devkit = {
+  biome.settings.formatter.lineWidth = 100;
+  rustfmt.settings.group_imports = "Preserve";
+  taplo.settings.formatting.column_width = 100;
+};
+```
+
+From devenv these sit under `treefmt.config`. A hook takes its overrides
+on `git-hooks.hooks.<name>`, for instance `files` or `settings.root` on
+`crate2nix`.
+
 ## Reference
 
 ### Flake outputs
 
 | Output | What it is |
 | --- | --- |
-| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` and `treefmt.config.programs.biome.enable` are both true, it also enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
+| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` and `treefmt.config.devkit.biome.enable` are both true, it also enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
 | `treefmtModules.default` | treefmt-nix module. See [treefmt module](#treefmt-module). |
 | `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `crate2nix`, `lsLint`. |
 | `lib.treefmt pkgs module` | `treefmt-nix.lib.evalModule` with `treefmtModules.default` and `module` imported. |
@@ -141,14 +171,44 @@ in the Cargo workspace whenever a `Cargo.toml`, `Cargo.lock` or
 
 ### treefmt module
 
+Each tool is off until its `enable` is set. Every value devkit puts in a
+`settings` option is at `mkDefault`.
+
+Always set:
+
+| Option | Value |
+| --- | --- |
+| `settings.global.excludes` | adds `Cargo.json`, `**/Cargo.json` |
+
+**`devkit.biome`**
+
 | Option | Default | Effect |
 | --- | --- | --- |
-| `settings.global.excludes` | adds `Cargo.json`, `**/Cargo.json` | Always set. |
-| `settings.global.excludes` | adds `biome.json` | Set when `programs.biome.enable` is true. |
-| `programs.biome.settings` | `base` from `biome/settings.nix`, and `$schema` for the running Biome, every value at `mkDefault` | Set when `programs.biome.enable` is true. |
-| `programs.biome.validate.schema` | the schema in `programs.biome.package.src` | Set when `programs.biome.enable` is true. |
-| `devkit.biome.linter.enable` | `false` | Sets `programs.biome.settings.linter` to `linter` from `biome/settings.nix`, every value at `mkDefault`. |
-| `devkit.biome.configFile` | read-only | `programs.biome.settings` rendered as `biome.json`. Set when `programs.biome.enable` is true. |
+| `enable` | `false` | Enables `programs.biome` with `settings`, and adds `biome.json` to `settings.global.excludes`. |
+| `linter.enable` | `false` | Adds `linter` from `biome/settings.nix` to `settings.linter`. |
+| `settings` | `base` from `biome/settings.nix`, and `$schema` for the running Biome | Becomes `programs.biome.settings`. |
+| `configFile` | read-only | `programs.biome.settings` rendered as `biome.json`. |
+
+It also sets `programs.biome.validate.schema` to the schema in
+`programs.biome.package.src`, at `mkDefault`.
+
+**`devkit.rustfmt`**
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `enable` | `false` | Enables `programs.rustfmt`, passing `settings` with one `--config`, which takes precedence over a `rustfmt.toml`. |
+| `settings` | `style_edition = "2024"`, `imports_granularity = "Module"`, `group_imports = "StdExternalCrate"` | Values are booleans, integers or strings. |
+
+`imports_granularity` and `group_imports` are unstable rustfmt options.
+They take effect in a rustfmt that allows unstable features, as the
+nixpkgs one does.
+
+**`devkit.taplo`**
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `enable` | `false` | Enables `programs.taplo` with `settings`. |
+| `settings` | `formatting.column_width = 120` | Becomes `programs.taplo.settings`, rendered as `taplo.toml`. |
 
 `biome/settings.nix` holds `base`, the formatter, quote style and import
 groups, and `linter`, the contents of Biome's `linter` section.
@@ -171,7 +231,7 @@ them the settings treefmt runs with. The file is the output of the Nix
 settings, so a formatter rewriting it would fight `biomeConfig` the way it
 would fight the `crate2nix` hook over `Cargo.json`.
 
-### Why every Biome setting is a default
+### Why every devkit setting is a default
 
 A repository that disagrees with one shared value, a line width say,
 defines just that value. Without `mkDefault` on every leaf, that

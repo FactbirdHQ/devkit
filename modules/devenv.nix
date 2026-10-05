@@ -16,7 +16,7 @@ in {
       git-hooks.hooks = devkit.lib.hooks pkgs;
       treefmt.config.imports = [devkit.treefmtModules.default];
     }
-    (lib.mkIf (config.treefmt.enable && treefmt.programs.biome.enable) {
+    (lib.mkIf (config.treefmt.enable && treefmt.devkit.biome.enable) {
       git-hooks.hooks.biomeConfig = {
         enable = lib.mkDefault true;
         settings.configFile = treefmt.devkit.biome.configFile;
