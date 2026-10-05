@@ -166,8 +166,8 @@ git-hooks.hooks.lsLint = {
   enable = true;
   settings = {
     rules.".md" = "kebab-case | SCREAMING_SNAKE_CASE";
-    scopes."libraries/rust".".dir" = "snake_case | kebab-case";
-    scopes."ui-app".".tsx" = "kebab-case | regex:^_[a-z]+$";
+    scopes."crates".".dir" = "snake_case | kebab-case";
+    scopes."web".".tsx" = "kebab-case | regex:^_[a-z]+$";
     ignore = ["generated"];
   };
 };
@@ -325,5 +325,5 @@ replace the whole settings tree.
 ### Why crate2nix is pinned here
 
 nixpkgs ships a crate2nix without `--format json`, so the hook needs one
-from the crate2nix repository. devkit pins the commit governance and nest
-already use, and a repository that pins its own overrides `package`.
+from the crate2nix repository. devkit pins one commit, and a repository
+that pins its own overrides `package`.

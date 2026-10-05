@@ -44,7 +44,7 @@ in {
       type = lib.types.attrsOf (lib.types.attrsOf rule);
       default = {};
       example = {
-        "libraries/rust".".dir" = "snake_case | kebab-case";
+        "crates".".dir" = "snake_case | kebab-case";
       };
       description = "Rules for a path, merged over `rules`.";
     };

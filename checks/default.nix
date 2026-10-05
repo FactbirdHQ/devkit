@@ -138,8 +138,8 @@ in {
     test "$(yq -r '.ignore | contains(["vendor", ".git", "node_modules"])' $config)" = true
 
     mkdir repo && cd repo && git init -q
-    mkdir -p crates/stop_registrar src/__snapshots__ vendor/Not_Ours .github/workflows
-    touch crates/stop_registrar/mod.rs crates/Cargo.json src/good-name.ts
+    mkdir -p crates/example_crate src/__snapshots__ vendor/Not_Ours .github/workflows
+    touch crates/example_crate/mod.rs crates/Cargo.json src/good-name.ts
 
     # The macOS SDK in a devenv profile links include/ncurses and
     # include/ncursesw to their own directory, so a walk that follows
