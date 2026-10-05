@@ -4,6 +4,7 @@
   pkgs,
   crate2nix,
 }: {
+  biomeConfig = import ./biome-config.nix pkgs;
   cargoJsonSync = import ./cargo-json-sync.nix {inherit pkgs crate2nix;};
   lsLint = import ./ls-lint.nix pkgs;
 }
