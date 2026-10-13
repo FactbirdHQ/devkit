@@ -128,18 +128,19 @@ in {
   # A scope keeps every shared rule and changes only the keys it sets, the
   # ignore list keeps devkit's entries beside the repository's, and a name
   # outside the scope is still held to the shared rules. What git ignores is
-  # skipped, a symlink loop inside it included, and dot-named tool
-  # directories, `__snapshots__` and `Cargo.json` pass while names that only
-  # resemble them fail.
+  # never checked, a symlink loop or a link to / inside it included, and
+  # dot-named tool directories, `__snapshots__` and `Cargo.json` pass while
+  # names that only resemble them fail.
   ls-lint = pkgs.runCommand "ls-lint" {nativeBuildInputs = [pkgs.git pkgs.yq-go];} ''
     config=${lsLint.settings.generatedConfig}
     test "$(yq -r '.ls.crates.".dir"' $config)" = "snake_case | kebab-case"
     test "$(yq -r '.ls.crates.".ts"' $config)" = kebab-case
-    test "$(yq -r '.ignore | contains(["vendor", ".git", "node_modules"])' $config)" = true
+    test "$(yq -r '.ignore | contains(["vendor", ".github"])' $config)" = true
 
     mkdir repo && cd repo && git init -q
-    mkdir -p crates/example_crate src/__snapshots__ vendor/Not_Ours .github/workflows
-    touch crates/example_crate/mod.rs crates/Cargo.json src/good-name.ts
+    mkdir -p crates/example_crate src/__snapshots__ vendor/Not_Ours .github/workflows outside .devenv
+    touch crates/example_crate/mod.rs crates/Cargo.json src/good-name.ts src/__snapshots__/good-name.ts
+    touch vendor/Not_Ours/Bad_Name.ts .github/workflows/Bad_Name.ts outside/Bad_Name.ts
 
     # The macOS SDK in a devenv profile links include/ncurses and
     # include/ncursesw to their own directory, so a walk that follows
@@ -147,7 +148,9 @@ in {
     mkdir -p Build_Output/include
     ln -s . Build_Output/include/ncurses
     ln -s . Build_Output/include/ncursesw
-    echo Build_Output >.gitignore
+    ln -s / .devenv/root
+    ln -s ../outside .devenv/profile
+    printf "%s\n" Build_Output outside .devenv >.gitignore
 
     timeout 60 ${lsLint.entry}
 
@@ -160,7 +163,8 @@ in {
     touch src/Bad_Name.ts
     fails
     rm src/Bad_Name.ts
-    mkdir .Bad_Dot
+    # git lists no empty directory, so the directory holds a file.
+    mkdir .Bad_Dot && touch .Bad_Dot/good-name.ts
     fails
     touch $out
   '';
