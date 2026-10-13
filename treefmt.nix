@@ -4,6 +4,7 @@
   programs.alejandra.enable = true;
   devkit = {
     biome.enable = true;
+    githubWorkflows.enable = true;
     taplo.enable = true;
   };
 }
