@@ -1,0 +1,24 @@
+name: update-nixpkgs
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-nixpkgs:
+    runs-on: ubuntu-latest
+    # Org app secrets do not reach a public repository, so GITHUB_TOKEN opens
+    # the PR, and a PR opened by GITHUB_TOKEN starts no workflow runs.
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/determinate-nix-action@v3
+      - uses: DeterminateSystems/update-flake-lock@v29
+        with:
+          inputs: nixpkgs
+          branch: chore/update-nixpkgs
+          commit-msg: 'chore(nix): update nixpkgs'
+          pr-title: 'chore(nix): update nixpkgs'

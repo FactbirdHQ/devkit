@@ -1,0 +1,33 @@
+version: 2
+
+# The cooldown holds back a release until it has been public for a few days,
+# which keeps a compromised release out of the lock. Security updates skip it.
+updates:
+  # Dependabot skips the FlakeHub nixpkgs input, so the update-nixpkgs
+  # workflow bumps it instead.
+  - package-ecosystem: nix
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      flake-inputs:
+        patterns:
+          - '*'
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      actions:
+        patterns:
+          - '*'
