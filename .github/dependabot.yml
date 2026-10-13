@@ -1,0 +1,38 @@
+version: 2
+
+# The cooldown holds back a release until it has been public for a few days,
+# which keeps a compromised release out of the lock. Security updates skip it.
+updates:
+  - package-ecosystem: nix
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      flake-inputs:
+        patterns:
+          - '*'
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns:
+          - '*'
+  - package-ecosystem: npm
+    directory: '/.github/cdk'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      cdkactions:
+        patterns:
+          - '*'
