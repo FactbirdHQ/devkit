@@ -2,8 +2,8 @@
 # adds the devkit treefmt module to devenv's treefmt configuration.
 #
 # Enabling Biome in `treefmt.config` also writes `biome.json` to the
-# project root, on shell entry and from the `biomeConfig` hook, and the
-# `cdkactions` hook formats its output with the project's treefmt.
+# project root, and the `cdkactions` hook formats its output with the
+# project's treefmt.
 devkit: {
   config,
   lib,
@@ -27,12 +27,15 @@ in {
         enable = lib.mkDefault true;
         settings.configFile = treefmt.devkit.biome.configFile;
       };
-      # A copy rather than devenv's default symlink into the store, so the
-      # repository can commit the file and readers without devenv see the
-      # same settings.
+      # A copy while the biomeConfig hook keeps a committed file in step,
+      # so readers without devenv see the same settings. Otherwise a
+      # symlink into the store, which nobody commits.
       files."biome.json" = {
         json = treefmt.programs.biome.settings;
-        copyMode = "copy";
+        copyMode =
+          if config.git-hooks.hooks.biomeConfig.enable
+          then "copy"
+          else "symlink";
       };
     })
   ];

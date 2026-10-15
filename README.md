@@ -46,6 +46,14 @@ shell entry and enables the `biomeConfig` hook, which writes it again on
 commit. Commit the file: editors and a bare `biome` read it, and it is
 never edited by hand.
 
+To keep `biome.json` out of the repository, turn the hook off and
+ignore the file. devenv then links `biome.json` to the rendered settings
+in the store, which editors and a bare `biome` still read:
+
+```nix
+git-hooks.hooks.biomeConfig.enable = false;
+```
+
 To keep the repository's own crate2nix pin for `Cargo.json`:
 
 ```nix
@@ -186,7 +194,7 @@ profile has, keeps that glob from ever finishing. To keep the configuration in t
 
 | Output | What it is |
 | --- | --- |
-| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` is true, it sets `cdkactions`' `settings.treefmt` to devenv's treefmt wrapper. When `treefmt.config.devkit.biome.enable` is also true, it enables `biomeConfig` and writes `biome.json` through `files` with `copyMode = "copy"`. |
+| `devenvModules.default` | devenv module. Declares every hook below under `git-hooks.hooks`, disabled, and imports `treefmtModules.default` into `treefmt.config`. When `treefmt.enable` is true, it sets `cdkactions`' `settings.treefmt` to devenv's treefmt wrapper. When `treefmt.config.devkit.biome.enable` is also true, it enables `biomeConfig` at `mkDefault` and writes `biome.json` through `files`, with `copyMode = "copy"` while `biomeConfig` is enabled and `"symlink"` while it is disabled. |
 | `treefmtModules.default` | treefmt-nix module. See [treefmt module](#treefmt-module). |
 | `lib.hooks pkgs` | Attribute set of git-hooks.nix hook modules: `biomeConfig`, `cdkactions`, `crate2nix`, `lsLint`. |
 | `lib.treefmt pkgs module` | `treefmt-nix.lib.evalModule` with `treefmtModules.default` and `module` imported. |
