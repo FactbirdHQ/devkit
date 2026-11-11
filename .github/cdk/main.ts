@@ -1,6 +1,22 @@
 // The workflows in .github/workflows are generated from here. Run
 // `yarn build` in this directory and commit both sides.
-import { App, Job, RunnerLabel, Stack, Workflow } from '@factbird/cdkactions';
+import {
+  App,
+  checkoutV7,
+  DependabotActionPinSync,
+  determinateNixV3,
+  Job,
+  RunnerLabel,
+  Stack,
+  setupNodeV6,
+  updateFlakeLockV29,
+  Workflow,
+} from '@factbird/cdkactions';
+
+const checkout = checkoutV7.pinned('3d3c42e5aac5ba805825da76410c181273ba90b1', 'v7.0.1');
+const determinateNix = determinateNixV3.pinned('d0c908e6cbe9f89f36ed8205a3ab6f092636916a', 'v3.23.1');
+const updateFlakeLock = updateFlakeLockV29.pinned('da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3', 'v29');
+const setupNode = setupNodeV6.pinned('249970729cb0ef3589644e2896645e5dc5ba9c38', 'v6.5.0');
 
 const app = new App({ createValidateWorkflow: false, outdir: '../workflows' });
 const stack = new Stack(app, 'devkit');
@@ -27,21 +43,30 @@ new Job(updateNixpkgs, 'update', {
   runsOn: RunnerLabel.UBUNTU_LATEST,
   permissions: { contents: 'write', pullRequests: 'write' },
   steps: [
-    { uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' }, // v7.0.1
-    {
-      name: 'Install Nix',
-      uses: 'DeterminateSystems/determinate-nix-action@d0c908e6cbe9f89f36ed8205a3ab6f092636916a', // v3.23.1
-    },
-    {
+    checkout({ id: 'checkout' }),
+    determinateNix({ name: 'Install Nix' }),
+    updateFlakeLock({
+      id: 'update-flake-lock',
       name: 'Update nixpkgs and open pull request',
-      uses: 'DeterminateSystems/update-flake-lock@da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3', // v29
       with: {
         inputs: 'nixpkgs',
         branch: 'chore/update-nixpkgs',
-        'commit-msg': 'chore(nix): update nixpkgs',
-        'pr-title': 'chore(nix): update nixpkgs',
+        commitMsg: 'chore(nix): update nixpkgs',
+        prTitle: 'chore(nix): update nixpkgs',
       },
-    },
+    }),
+  ],
+});
+
+// The CLI and the synth run from the repository root, while this package
+// keeps its own node_modules.
+new DependabotActionPinSync(stack, 'dependabot-action-pin-sync', {
+  sources: ['.github/cdk/main.ts'],
+  cliCommand: '.github/cdk/node_modules/.bin/cdkactions',
+  synthCommand: 'yarn --cwd .github/cdk build',
+  setupSteps: [
+    setupNode({ id: 'setup-node', with: { nodeVersion: '24' } }),
+    { name: 'Install', run: 'corepack enable && yarn --cwd .github/cdk install --immutable' },
   ],
 });
 

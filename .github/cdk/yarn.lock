@@ -5,30 +5,30 @@ __metadata:
   version: 9
   cacheKey: 10c0
 
-"@factbird/cdkactions-cli@npm:2.1.2":
-  version: 2.1.2
-  resolution: "@factbird/cdkactions-cli@npm:2.1.2"
+"@factbird/cdkactions-cli@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "@factbird/cdkactions-cli@npm:2.2.0"
   dependencies:
-    "@factbird/cdkactions": "npm:2.1.2"
+    "@factbird/cdkactions": "npm:2.2.0"
     constructs: "npm:^10.4.2"
     fs-extra: "npm:^11.3.0"
     yaml: "npm:^2.7.1"
     yargs: "npm:^16.2.0"
   bin:
     cdkactions: bin/cdkactions
-  checksum: 10c0/7d92934edeee42ba771f852140189caba9e74c1ee91e4f6733529034d378acb460c8ddbf6dc10db827af615ee28894b65c14d0481db6c92e2c9dd960febce5bb
+  checksum: 10c0/cdeaacbf365ff83dfb262a26bd2fb538eb39f37e1cd5deb62ea97bd7d7ed2b2f78e094921213fcdccfb9c149e81f53f2f4f41ac7da72c2ce8a112c070f649807
   languageName: node
   linkType: hard
 
-"@factbird/cdkactions@npm:2.1.2":
-  version: 2.1.2
-  resolution: "@factbird/cdkactions@npm:2.1.2"
+"@factbird/cdkactions@npm:2.2.0, @factbird/cdkactions@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "@factbird/cdkactions@npm:2.2.0"
   dependencies:
     js-yaml: "npm:^4.0.0"
     ts-dedent: "npm:^2.2.0"
   peerDependencies:
     constructs: ^10.4.2
-  checksum: 10c0/28e6666887eec322ea7dc012c3a87fdf282393589c5e58cf5d486732380ec9fd0ce31614ce788c90f582a1830a00968fef66f62fedb706315f4c11d4c9d76451
+  checksum: 10c0/275783658cc6281fa1a4672f25f0c2dcc46e48a1ab0fb4604666492fd32788559290ed915748857030022beeab02317a11429fad86fe1bcc249a459e83d3ec40
   languageName: node
   linkType: hard
 
@@ -109,8 +109,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "devkit-workflows@workspace:."
   dependencies:
-    "@factbird/cdkactions": "npm:2.1.2"
-    "@factbird/cdkactions-cli": "npm:2.1.2"
+    "@factbird/cdkactions": "npm:^2.2.0"
+    "@factbird/cdkactions-cli": "npm:^2.2.0"
     "@types/node": "npm:^24.0.0"
     constructs: "npm:10.4.2"
     typescript: "npm:^5.7.3"

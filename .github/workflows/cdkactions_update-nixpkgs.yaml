@@ -14,10 +14,12 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@d0c908e6cbe9f89f36ed8205a3ab6f092636916a
-      - name: Update nixpkgs and open pull request
+      - id: update-flake-lock
+        name: Update nixpkgs and open pull request
         uses: DeterminateSystems/update-flake-lock@da03c0f078bc4b2c37ee4f7e072d34bf8f188bb3
         with:
           branch: chore/update-nixpkgs
